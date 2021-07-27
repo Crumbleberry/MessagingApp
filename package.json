@@ -1,0 +1,22 @@
+{
+  "name": "messagingapp",
+  "version": "1.0.0",
+  "description": "A Messaging App created to send messages to and from users that will login",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Crumbleberry/MessagingApp.git"
+  },
+  "author": "Tyler Crum",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Crumbleberry/MessagingApp/issues"
+  },
+  "homepage": "https://github.com/Crumbleberry/MessagingApp#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
