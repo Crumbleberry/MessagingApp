@@ -5,6 +5,18 @@
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
     </head>
     <body>
-        Logged In
+        <table>
+            <tr><th>From</th><th>To</th><th>Message</th><th>TimeStamp</th></tr>
+            <% if(messagesToShow) {                 %>
+            <%      messages.forEach( message => {  %>
+                        <tr><td><%=message.fromUser%></td><td><%=message.toUser%></td><td><%=message.messageText%></td><td><%=message.timeStamp%></td></tr>
+            <%      })                               %>
+            <% }                                    %>
+        </table>
+        <form action="/sendMessage" method="POST">
+            <input type="text" name="toUser" placeholder="toUser" required>
+            <input type='text' name='messageText' placeholder='messageText' required>
+            <input type="submit">
+        </form>
     </body>
 </html>

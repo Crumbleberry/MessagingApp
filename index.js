@@ -60,15 +60,76 @@ app.get('/createaccount', (req, res) => {
     res.render('createaccount');
 })
 
-app.get('/:id/landing', (req, res) => {
-    res.render('landing');
+app.get('/:id/landing', async (req, res) => {
+    
+    var params = {
+        TableName: 'MessagingAppMessages',
+        ExpressionAttributeNames: { 
+            "#FU" : "fromUser",
+         },
+        ExpressionAttributeValues: {
+            ':n': {
+                S: req.params.id
+            }
+        },
+        FilterExpression: 'fromUser = :n',
+        ProjectionExpression: '#FU'
+    };
+
+    var messages;
+    var messagesToShow = false;
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(params, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log(data);
+                messages = data;
+                if(data.length > 0) {
+                    messagesToShow = true;
+                }
+            }
+            resolve();
+        })
+    })
+
+    res.render('landing',{messagesToShow: false, messages: null});
+})
+
+app.get('/login', (req, res) => {
+    res.render('LoginPage');
 })
 
 // POST Routes
-app.post('/login', (req,res) => {
-    var enteredUsername = '';
+app.post('/login', async (req,res) => {
+    var enteredUsername = req.body.userName;
+    var enteredPassword = req.body.password;
 
+    var correctLogin = false;
 
+    var params = {
+        TableName: 'MessagingAppUsers'
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(params, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                data.Items.forEach(element => {
+                    if(element.UserName == enteredUsername && element.UserPassword == enteredPassword) {
+                        correctLogin = true;
+                        res.redirect(`/${element.UserID}/landing`);
+                    }
+                }); 
+            }
+            if(!correctLogin) {
+                res.send('Invalid Username and/or Password');
+            }
+            resolve();
+        })
+    });
 })
 
 app.post('/createaccount', async (req, res) => {
@@ -91,10 +152,10 @@ app.post('/createaccount', async (req, res) => {
                     if(element.UserID > maxID) {
                         maxID = element.UserID;
                     }
-                });
+                }); 
             }
+            resolve();
         })
-        resolve();
     });
     
 
@@ -121,10 +182,11 @@ app.post('/createaccount', async (req, res) => {
             } else {
                 console.log(`New User: ${newUser.UserName} Saved`);
             }
+            resolve();
         })
     }); 
 
-    res.redirect('landing');
+    res.redirect(`/${newUser.UserID}/landing`);
 })
 
 console.log('Running');
