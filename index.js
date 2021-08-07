@@ -9,6 +9,7 @@ app.use(bodyparser.urlencoded({extended: true}));
 
 // Setting up the Database using DynamoDB
 const AWS = require('aws-sdk');
+const { promiseImpl } = require('ejs');
 
 // Setting up the AWS Config
 const awsConfig = {
@@ -79,19 +80,23 @@ app.post('/createaccount', async (req, res) => {
         TableName: 'MessagingAppUsers'
     };
 
-    docClient.scan(params, (err, data) => {
-        if(err) {
-            console.log(err);
-        } else {
-            console.log(data);
-            data.Items.forEach(element => {
-                console.log(element);
-                if(element.UserID > maxID) {
-                    maxID = element.UserID;
-                }
-            });
-        }
-    })
+    await new Promise((resolve, reject) => {
+        docClient.scan(params, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log(data);
+                data.Items.forEach(element => {
+                    console.log(element);
+                    if(element.UserID > maxID) {
+                        maxID = element.UserID;
+                    }
+                });
+            }
+        })
+        resolve();
+    });
+    
 
     console.log(`Max ID: ${maxID}, Creating new user`);
 
@@ -109,13 +114,15 @@ app.post('/createaccount', async (req, res) => {
     console.log('Saving new User to DB');
     console.log(newUser);
 
-    docClient.put(newUserParams, (err, data) => {
-        if(err) {
-            console.log(err);
-        } else {
-            console.log(`New User: ${newUser.UserName} Saved`);
-        }
-    })
+    await new Promise((resolve, reject) => {
+        docClient.put(newUserParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log(`New User: ${newUser.UserName} Saved`);
+            }
+        })
+    }); 
 
     res.redirect('landing');
 })
