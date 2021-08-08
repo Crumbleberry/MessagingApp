@@ -3,6 +3,9 @@ const express = require('express');
 const app = express();
 app.set('view engine','ejs');
 
+// Setting up Enviornment Variables
+require('dotenv').config();
+
 //Setting up the body parser
 const bodyparser = require('body-parser');
 app.use(bodyparser.urlencoded({extended: true})); 
@@ -15,7 +18,7 @@ const { promiseImpl } = require('ejs');
 const awsConfig = {
     'region': 'us-east-2',
     'endpoint': 'http://dynamodb.us-east-2.amazonaws.com',
-    'accessKeyId': 'AKIATAGDZM7M4XE32Q7U', 'secretAccessKey': '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'
+    'accessKeyId': 'process.env.AWS_ACCESS_KEY_ID', 'secretAccessKey': 'process.env.AWS_SECRET_ACCESS_KEY'
 }
 
 AWS.config.update(awsConfig);
@@ -62,39 +65,34 @@ app.get('/createaccount', (req, res) => {
 
 app.get('/:id/landing', async (req, res) => {
     
-    var params = {
+    const messagesParams = {
         TableName: 'MessagingAppMessages',
-        ExpressionAttributeNames: { 
-            "#FU" : "fromUser",
-         },
-        ExpressionAttributeValues: {
-            ':n': {
-                S: req.params.id
-            }
+        FilterExpression: '#FR = :f',
+        ExpressionAttributeNames: {
+            '#FR': 'fromUser',
         },
-        FilterExpression: 'fromUser = :n',
-        ProjectionExpression: '#FU'
+        ExpressionAttributeValues: {
+            ':f': req.params.id,
+        }
     };
 
-    var messages;
-    var messagesToShow = false;
 
     await new Promise((resolve, reject) => {
-        docClient.scan(params, (err, data) => {
+        docClient.scan(messagesParams, (err, data) => {
             if(err) {
                 console.log(err);
             } else {
                 console.log(data);
-                messages = data;
-                if(data.length > 0) {
-                    messagesToShow = true;
+                if(data.Count > 0) {
+                    var messagesToShow = true;
                 }
+                res.render('landing',{messagesToShow: messagesToShow, messages: data, userID: req.params.id});
             }
             resolve();
         })
     })
 
-    res.render('landing',{messagesToShow: false, messages: null});
+    
 })
 
 app.get('/login', (req, res) => {
@@ -187,6 +185,56 @@ app.post('/createaccount', async (req, res) => {
     }); 
 
     res.redirect(`/${newUser.UserID}/landing`);
+})
+
+app.post('/sendMessage/:id', async (req, res) => {
+
+    var maxID = 0;
+
+    var allMessagesParams = {
+        TableName: 'MessagingAppMessages'
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(allMessagesParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                data.Items.forEach(element => {
+                    if(element.MessageID > maxID) {
+                        maxID = element.MessageID;
+                    }
+                }); 
+            }
+            resolve();
+        })
+    });
+
+    var newItem = {
+        'MessageID': maxID + 1,
+        'fromUser': req.params.id,
+        'toUser': req.body.toUser,
+        'messageText': req.body.messageText,
+        'timeStamp': Date.now()
+    };
+
+    var params = {
+        TableName: 'MessagingAppMessages',
+        Item: newItem
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.put(params, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log('Saved!');
+            }
+            resolve();
+        })
+    })
+
+    res.redirect(`/${newItem.fromUser}/landing`);
 })
 
 console.log('Running');
