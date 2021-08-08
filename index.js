@@ -92,6 +92,27 @@ app.get('/:id/landing', async (req, res) => {
         })
     })
 
+    const conversationsParams = {
+        TableName: 'MessagingAppConversations',
+        FilterExpression: '#SU = :s',
+        ExpressionAttributeNames: {
+            '#SU': 'SendUser',
+        },
+        ExpressionAttributeValues: {
+            ':s': req.params.id,
+        }
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient(conversationsParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                
+            }
+        })
+    })
+
     
 })
 
@@ -236,6 +257,13 @@ app.post('/sendMessage/:id', async (req, res) => {
 
     res.redirect(`/${newItem.fromUser}/landing`);
 })
+
+
+// Helper Methods
+function combineListsByTime(sentMessagesList, receivedMessagesList) {
+
+
+}
 
 console.log('Running');
 app.listen(3000);
