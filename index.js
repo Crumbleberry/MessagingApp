@@ -65,7 +65,11 @@ app.get('/createaccount', (req, res) => {
 
 app.get('/:id/landing', async (req, res) => {
     
-    const messagesParams = {
+    var sentMessages = [];
+    var receivedMessages = [];
+    var conversations = [];
+
+    const fromMessagesParams = {
         TableName: 'MessagingAppMessages',
         FilterExpression: '#FR = :f',
         ExpressionAttributeNames: {
@@ -76,19 +80,36 @@ app.get('/:id/landing', async (req, res) => {
         }
     };
 
-
     await new Promise((resolve, reject) => {
-        docClient.scan(messagesParams, (err, data) => {
+        docClient.scan(fromMessagesParams, (err, data) => {
             if(err) {
                 console.log(err);
             } else {
-                console.log(data);
-                if(data.Count > 0) {
-                    var messagesToShow = true;
-                }
-                res.render('landing',{messagesToShow: messagesToShow, messages: data, userID: req.params.id});
+                sentMessages = data;
             }
             resolve();
+        })
+    })
+
+    const toMessagesParams = {
+        TableName: 'MessagingAppMessages',
+        FilterExpression: '#TU = :t',
+        ExpressionAttributeNames: {
+            '#TU': 'toUser',
+        },
+        ExpressionAttributeValues: {
+            ':t': req.params.id,
+        }
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(toMessagesParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                receivedMessages = data;
+                resolve();
+            }
         })
     })
 
@@ -104,14 +125,22 @@ app.get('/:id/landing', async (req, res) => {
     };
 
     await new Promise((resolve, reject) => {
-        docClient(conversationsParams, (err, data) => {
+        docClient.scan(conversationsParams, (err, data) => {
             if(err) {
                 console.log(err);
             } else {
-                
+                conversations = data;
+                resolve();
             }
         })
     })
+
+    var fullMessages = combineListsByTime(sentMessages, receivedMessages);
+
+    res.render('landing',{messagesToShow: (fullMessages.length > 0), 
+                            messages: fullMessages, 
+                            userID: req.params.id, 
+                            conversations: conversations});
 
     
 })
@@ -261,7 +290,54 @@ app.post('/sendMessage/:id', async (req, res) => {
 
 // Helper Methods
 function combineListsByTime(sentMessagesList, receivedMessagesList) {
+    var fullList = [];
 
+    sentMessagesList.Items.sort((a, b) => {
+        if(a.timeStamp > b.timeStamp) {
+            return 1;
+        } else  if(a.timeStamp < b.timeStamp) {
+            return  -1;
+        } else {
+            return 0;
+        }
+    });
+    receivedMessagesList.Items.sort((a, b) => {
+        if(a.timeStamp > b.timeStamp) {
+            return 1;
+        } else  if(a.timeStamp < b.timeStamp) {
+            return  -1;
+        } else {
+            return 0;
+        }
+    });
+
+    var i = 0;
+    var j = 0;
+    while(i < sentMessagesList.Count && j < receivedMessagesList.Count) {
+            if(sentMessagesList.Items[i].timeStamp < receivedMessagesList.Items[j].timeStamp) {
+                fullList.push(sentMessagesList.Items[i]);
+                i++;
+            } else {
+                fullList.push(receivedMessagesList.Items[j]);
+                j++;
+            }
+    }
+
+    if(i < sentMessagesList.Count) {
+        while(i < sentMessagesList.Count) {
+            fullList.push(sentMessagesList.Items[i]);
+            i++;
+        }
+    }
+
+    if(j < receivedMessagesList.Count) {
+        while(j < receivedMessagesList.Count) {
+            fullList.push(receivedMessagesList.Items[j]);
+            j++;
+        }
+    }
+
+    return fullList;
 
 }
 

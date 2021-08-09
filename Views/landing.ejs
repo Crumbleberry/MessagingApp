@@ -10,12 +10,29 @@
             <div class="col-md-9">
                 <table class="table">
                     <thead class="thead-dark">
-                    <tr><th>From</th><th>To</th><th>Message</th><th>TimeStamp</th></tr>
                     </thead>
-                    <% if(messagesToShow) {                 %>
-                    <%      messages.Items.forEach( message => {  %>
-                                <tr><td><%=message.fromUser%></td><td><%=message.toUser%></td><td><%=message.messageText%></td><td><%=new Date(message.timeStamp)%></td></tr>
-                    <%      })                               %>
+                    <% if(messagesToShow) {                            %>
+                    <%      messages.forEach( message => {             %>
+                    <%          if(message.fromUser == userID) {       %>
+                        <div class="media w-50 ml-auto mb-3">
+                            <div class="media-body">
+                              <div class="bg-primary rounded py-2 px-3 mb-2">
+                                <p class="text-small mb-0 text-white"><%=message.messageText %></p>
+                              </div>
+                              <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
+                            </div>
+                          </div>
+                    <% } else {                             %>
+                        <div class="media w-50 mb-3">
+                            <div class="media-body ml-3">
+                              <div class="bg-light rounded py-2 px-3 mb-2">
+                                <p class="text-small mb-0 text-muted"><%=message.messageText %></p>
+                              </div>
+                              <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
+                            </div>
+                          </div>
+                    <% }                                    %>
+                    <%      })                              %>
                     <% }                                    %>
                 </table>
                 <form action="/sendMessage/<%=userID%>" method="POST">
