@@ -68,6 +68,7 @@ app.get('/:id/landing', async (req, res) => {
     var sentMessages = [];
     var receivedMessages = [];
     var conversations = [];
+    var users = [];
 
     const fromMessagesParams = {
         TableName: 'MessagingAppMessages',
@@ -135,12 +136,28 @@ app.get('/:id/landing', async (req, res) => {
         })
     })
 
+    var userScanParams = {
+        TableName: 'MessagingAppUsers'
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(userScanParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                users = data.Items;
+            }
+            resolve();
+        })
+    });
+
     var fullMessages = combineListsByTime(sentMessages, receivedMessages);
 
     res.render('landing',{messagesToShow: (fullMessages.length > 0), 
                             messages: fullMessages, 
                             userID: req.params.id, 
-                            conversations: conversations});
+                            conversations: conversations,
+                            allUsers: users});
 
     
 })
@@ -287,12 +304,68 @@ app.post('/sendMessage/:id', async (req, res) => {
     res.redirect(`/${newItem.fromUser}/landing`);
 })
 
+app.post('/createConversation/:id', async (req, res) => {
+
+    var maxID = 0;
+
+    var allMessagesParams = {
+        TableName: 'MessagingAppConversations'
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.scan(allMessagesParams, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                data.Items.forEach(element => {
+                    if(element.ConversationID > maxID) {
+                        maxID = element.ConversationID;
+                    }
+                }); 
+            }
+            resolve();
+        })
+    });
+
+    var newItem = {
+        'ConversationID': maxID + 1,
+        'SendUser': req.params.id,
+        'RecieveUser': req.body.toUser,
+    };
+
+    var params = {
+        TableName: 'MessagingAppConversations',
+        Item: newItem
+    };
+
+    await new Promise((resolve, reject) => {
+        docClient.put(params, (err, data) => {
+            if(err) {
+                console.log(err);
+            } else {
+                console.log('Saved!');
+            }
+            resolve();
+        })
+    })
+
+    res.redirect(`/${newItem.SendUser}/landing`);
+})
+
 
 // Helper Methods
 function combineListsByTime(sentMessagesList, receivedMessagesList) {
     var fullList = [];
 
-    sentMessagesList.Items.sort((a, b) => {
+    sentMessagesList.Items.forEach(message => {
+        fullList.push(message);
+    })
+
+    receivedMessagesList.Items.forEach(message => {
+        fullList.push(message);
+    })
+
+    fullList.sort((a, b) => {
         if(a.timeStamp > b.timeStamp) {
             return 1;
         } else  if(a.timeStamp < b.timeStamp) {
@@ -301,41 +374,7 @@ function combineListsByTime(sentMessagesList, receivedMessagesList) {
             return 0;
         }
     });
-    receivedMessagesList.Items.sort((a, b) => {
-        if(a.timeStamp > b.timeStamp) {
-            return 1;
-        } else  if(a.timeStamp < b.timeStamp) {
-            return  -1;
-        } else {
-            return 0;
-        }
-    });
-
-    var i = 0;
-    var j = 0;
-    while(i < sentMessagesList.Count && j < receivedMessagesList.Count) {
-            if(sentMessagesList.Items[i].timeStamp < receivedMessagesList.Items[j].timeStamp) {
-                fullList.push(sentMessagesList.Items[i]);
-                i++;
-            } else {
-                fullList.push(receivedMessagesList.Items[j]);
-                j++;
-            }
-    }
-
-    if(i < sentMessagesList.Count) {
-        while(i < sentMessagesList.Count) {
-            fullList.push(sentMessagesList.Items[i]);
-            i++;
-        }
-    }
-
-    if(j < receivedMessagesList.Count) {
-        while(j < receivedMessagesList.Count) {
-            fullList.push(receivedMessagesList.Items[j]);
-            j++;
-        }
-    }
+    
 
     return fullList;
 

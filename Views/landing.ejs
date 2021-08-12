@@ -6,41 +6,56 @@
     </head>
     <body>
         <div class="row">
-            <div class="col-md-2"></div>
-            <div class="col-md-9">
-                <table class="table">
-                    <thead class="thead-dark">
-                    </thead>
-                    <% if(messagesToShow) {                            %>
-                    <%      messages.forEach( message => {             %>
-                    <%          if(message.fromUser == userID) {       %>
-                        <div class="media w-50 ml-auto mb-3">
-                            <div class="media-body">
-                              <div class="bg-primary rounded py-2 px-3 mb-2">
-                                <p class="text-small mb-0 text-white"><%=message.messageText %></p>
-                              </div>
-                              <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
-                            </div>
-                          </div>
-                    <% } else {                             %>
-                        <div class="media w-50 mb-3">
-                            <div class="media-body ml-3">
-                              <div class="bg-light rounded py-2 px-3 mb-2">
-                                <p class="text-small mb-0 text-muted"><%=message.messageText %></p>
-                              </div>
-                              <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
-                            </div>
-                          </div>
-                    <% }                                    %>
-                    <%      })                              %>
-                    <% }                                    %>
-                </table>
-                <form action="/sendMessage/<%=userID%>" method="POST">
-                    <input type="text" name="toUser" placeholder="toUser" required>
-                    <input type='text' name='messageText' placeholder='messageText' required>
-                    <input type="submit">
-                </form>
+            <div class="col-md-2">
+              <% if(conversations) {      %>
+                <% conversations.Items.forEach(conversation => { %>
+                  <% allUsers.forEach( user => { if(user.UserID == conversation.RecieveUser) { %>
+                <button type="button" class="btn btn-outline-primary btn-block"><%= user.UserName %></button>
+                  <% } })                 %>
+                <% })                     %>
+              <% }                        %>
+              
+              <form action="/createConversation/<%=userID%>" method="POST">
+                <select name="toUser" id="toUser">
+                  <% allUsers.forEach( user => {  %>
+                    <option value="<%=user.UserName %>"><%=user.UserName %></option>
+                  <% })                           %>
+                </select>
+                <input type="submit">
+              </form>
+
             </div>
+              <div class="col-md-9 overflow-auto h-100">
+                      <% if(messagesToShow) {                            %>
+                      <%      messages.forEach( message => {             %>
+                      <%          if(message.fromUser == userID) {       %>
+                          <div class="media w-50 ml-auto mb-3">
+                              <div class="media-body">
+                                <div class="bg-primary rounded py-2 px-3 mb-2">
+                                  <p class="text-small mb-0 text-white"><%=message.messageText %></p>
+                                </div>
+                                <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
+                              </div>
+                            </div>
+                      <% } else {                             %>
+                          <div class="media w-50 mb-3">
+                              <div class="media-body ml-3">
+                                <div class="bg-light rounded py-2 px-3 mb-2">
+                                  <p class="text-small mb-0 text-muted"><%=message.messageText %></p>
+                                </div>
+                                <p class="small text-muted"><%=new Date(message.timeStamp)%></p>
+                              </div>
+                            </div>
+                      <% }                                    %>
+                      <%      })                              %>
+                      <% }                                    %>
+                  
+                  <form action="/sendMessage/<%=userID%>" method="POST">
+                      <input type="text" name="toUser" placeholder="toUser" required>
+                      <input type='text' name='messageText' placeholder='messageText' required>
+                      <input type="submit">
+                  </form>
+              </div>
         </div>
     </body>
 </html>
